@@ -1,13 +1,13 @@
-﻿
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
-using LibraryService.WebAPI;
-using LibraryService.WebAPI.Data;
-using LibraryService.WebAPI.DTO;
+using HackerRank1.Application.DTO;
+using HackerRank1.Api;
+using HackerRank1.Domain.Models;
+using HackerRank1.Infrastructure.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -35,14 +35,13 @@ namespace LibraryService.Tests
                         .EnableSensitiveDataLogging()
                         .Options);
             Client = _factory.WithWebHostBuilder(builder =>
-                builder.UseStartup<Startup>()
-                .ConfigureServices(services =>
+                builder.ConfigureServices(services =>
                 {
                     services.RemoveAll(typeof(LibraryContext));
                     services.AddSingleton(context);
 
                     context.Database.OpenConnection();
-                    context.Database.EnsureCreated();
+                    context.Database.Migrate();
 
                     context.SaveChanges();
 
@@ -119,12 +118,12 @@ namespace LibraryService.Tests
 
             var response1 = await Client.GetAsync($"/api/libraries/2/books");
             response1.StatusCode.Should().BeEquivalentTo(StatusCodes.Status200OK);
-            var books = JsonConvert.DeserializeObject<IEnumerable<Book>>(response1.Content.ReadAsStringAsync().Result).ToList();
+            var books = JsonConvert.DeserializeObject<IEnumerable<Book>>(await response1.Content.ReadAsStringAsync())?.ToList() ?? new List<Book>();
             books.Count.Should().Be(0);
 
             var response2 = await Client.GetAsync($"/api/libraries/1/books");
             response2.StatusCode.Should().BeEquivalentTo(StatusCodes.Status200OK);
-            var books2 = JsonConvert.DeserializeObject<IEnumerable<Book>>(response2.Content.ReadAsStringAsync().Result).ToList();
+            var books2 = JsonConvert.DeserializeObject<IEnumerable<Book>>(await response2.Content.ReadAsStringAsync())?.ToList() ?? new List<Book>();
             books2.Count.Should().Be(2);
 
             var response3 = await Client.GetAsync($"/api/libraries/31232/books");
